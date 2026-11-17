@@ -1,7 +1,11 @@
-"""Minimal local REST API for the existing BBBP prediction pipeline."""
+"""Local web interface and REST API for the BBBP prediction pipeline."""
+
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from predictor import predict_single_smiles
 
@@ -11,6 +15,9 @@ app = FastAPI(
     title="BBBP Prediction API",
     description="Predict BBB permeability from one SMILES string.",
 )
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class PredictionRequest(BaseModel):
@@ -26,6 +33,17 @@ class PredictionResponse(BaseModel):
     prediction: int
     label: str
     probability: float
+    confidence: float
+    canonical_smiles: str
+    molecular_formula: str
+    descriptors: dict[str, float]
+    structure_image: str
+
+
+@app.get("/", include_in_schema=False)
+def home() -> FileResponse:
+    """Serve the small browser interface."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")
@@ -52,4 +70,9 @@ def predict(request: PredictionRequest) -> PredictionResponse:
         prediction=prediction,
         label="BBB permeable" if prediction == 1 else "BBB non-permeable",
         probability=result["probability_permeable"],
+        confidence=result["confidence"],
+        canonical_smiles=result["canonical_smiles"],
+        molecular_formula=result["molecular_formula"],
+        descriptors=result["descriptors"],
+        structure_image=result["structure_image"],
     )

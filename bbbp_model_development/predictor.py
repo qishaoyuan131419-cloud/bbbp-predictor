@@ -9,7 +9,12 @@ from pathlib import Path
 import joblib
 from rdkit.Chem import rdFingerprintGenerator
 
-from bbbp_rf_descriptor import MORGAN_FP_SIZE, MORGAN_RADIUS, predict_bbb
+from bbbp_rf_descriptor import (
+    MORGAN_FP_SIZE,
+    MORGAN_RADIUS,
+    molecule_summary,
+    predict_bbb,
+)
 
 
 # Resolve the model relative to this file, so loading works from any directory.
@@ -35,4 +40,5 @@ def predict_single_smiles(smiles: str) -> dict:
     ``predict_bbb`` remains the single source of truth for feature generation,
     Random Forest prediction, and probability calculation.
     """
-    return predict_bbb(smiles, _model, _generator)
+    prediction = predict_bbb(smiles, _model, _generator)
+    return {**prediction, **molecule_summary(smiles)}

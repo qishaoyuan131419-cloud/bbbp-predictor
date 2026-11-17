@@ -4,12 +4,14 @@ This is a reproducible development copy based on the original
 ``bbbp_rf+descriptor.py``. The original file is intentionally unchanged.
 """
 
+import base64
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from rdkit import Chem
-from rdkit.Chem import Descriptors, rdFingerprintGenerator
+from rdkit.Chem import Descriptors, rdDepictor, rdFingerprintGenerator, rdMolDescriptors
+from rdkit.Chem.Draw import rdMolDraw2D
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split
@@ -23,28 +25,60 @@ MORGAN_FP_SIZE = 2048
 DATA_PATH = Path(__file__).resolve().parent.parent / "BBBP.csv"
 
 
-def molecule_features(smiles: str, generator) -> np.ndarray:
-    """Create a 2048-bit Morgan fingerprint plus nine descriptors."""
-    mol = Chem.MolFromSmiles(smiles)
+def parse_smiles(smiles: str):
+    """Parse one non-empty SMILES string and return an RDKit molecule."""
+    if not isinstance(smiles, str) or not smiles.strip():
+        raise ValueError("SMILES must be a non-empty string")
+
+    mol = Chem.MolFromSmiles(smiles.strip())
     if mol is None:
         raise ValueError(f"Invalid SMILES: {smiles}")
+    return mol
+
+
+def molecular_descriptors(mol) -> dict[str, float]:
+    """Calculate the nine descriptors used by the trained model."""
+    return {
+        "molecular_weight": float(Descriptors.MolWt(mol)),
+        "logp": float(Descriptors.MolLogP(mol)),
+        "tpsa": float(Descriptors.TPSA(mol)),
+        "hydrogen_bond_donors": float(Descriptors.NumHDonors(mol)),
+        "hydrogen_bond_acceptors": float(Descriptors.NumHAcceptors(mol)),
+        "rotatable_bonds": float(Descriptors.NumRotatableBonds(mol)),
+        "ring_count": float(Descriptors.RingCount(mol)),
+        "heavy_atom_count": float(Descriptors.HeavyAtomCount(mol)),
+        "fraction_csp3": float(Descriptors.FractionCSP3(mol)),
+    }
+
+
+def molecule_features(smiles: str, generator) -> np.ndarray:
+    """Create a 2048-bit Morgan fingerprint plus nine descriptors."""
+    mol = parse_smiles(smiles)
 
     morgan_fp = generator.GetFingerprintAsNumPy(mol)
-    descriptors = np.array(
-        [
-            Descriptors.MolWt(mol),
-            Descriptors.MolLogP(mol),
-            Descriptors.TPSA(mol),
-            Descriptors.NumHDonors(mol),
-            Descriptors.NumHAcceptors(mol),
-            Descriptors.NumRotatableBonds(mol),
-            Descriptors.RingCount(mol),
-            Descriptors.HeavyAtomCount(mol),
-            Descriptors.FractionCSP3(mol),
-        ],
-        dtype=float,
-    )
+    descriptors = np.array(list(molecular_descriptors(mol).values()), dtype=float)
     return np.concatenate([morgan_fp, descriptors])
+
+
+def molecule_summary(smiles: str) -> dict:
+    """Return display-ready structure information for the web interface."""
+    mol = parse_smiles(smiles)
+    descriptors = molecular_descriptors(mol)
+
+    drawing_mol = Chem.Mol(mol)
+    rdDepictor.Compute2DCoords(drawing_mol)
+    drawer = rdMolDraw2D.MolDraw2DSVG(520, 360)
+    drawer.drawOptions().clearBackground = False
+    drawer.DrawMolecule(drawing_mol)
+    drawer.FinishDrawing()
+    svg = drawer.GetDrawingText().encode("utf-8")
+
+    return {
+        "canonical_smiles": Chem.MolToSmiles(mol),
+        "molecular_formula": rdMolDescriptors.CalcMolFormula(mol),
+        "descriptors": descriptors,
+        "structure_image": "data:image/svg+xml;base64," + base64.b64encode(svg).decode("ascii"),
+    }
 
 
 def train_model():

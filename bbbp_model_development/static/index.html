@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BBBP Predictor</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>BBBP Predictor</h1>
+      <p>Enter a SMILES string to predict whether a molecule can cross the blood-brain barrier.</p>
+    </header>
+
+    <section class="panel" aria-labelledby="input-title">
+      <h2 id="input-title">Molecule input</h2>
+      <form id="prediction-form">
+        <label for="smiles">SMILES string</label>
+        <textarea id="smiles" name="smiles" rows="4" spellcheck="false" required placeholder="Example: CCO"></textarea>
+
+        <div class="examples" aria-label="Example molecules">
+          <span>Examples:</span>
+          <button type="button" class="example" data-smiles="CCO">Ethanol</button>
+          <button type="button" class="example" data-smiles="CC(=O)OC1=CC=CC=C1C(=O)O">Aspirin</button>
+          <button type="button" class="example" data-smiles="CN1C(=O)C2=C(ncn2C)n(C)c1=O">Caffeine</button>
+        </div>
+
+        <button id="predict-button" class="primary-button" type="submit">
+          <span class="button-label">Predict</span>
+          <span class="button-loader" aria-hidden="true"></span>
+        </button>
+      </form>
+      <p id="error-message" class="error-message" role="alert" hidden></p>
+    </section>
+
+    <section class="panel results-panel" aria-labelledby="results-title" aria-live="polite">
+      <h2 id="results-title">Result</h2>
+      <p id="result-subtitle">No prediction yet.</p>
+
+      <div id="empty-state" class="empty-state">
+        Enter a molecule above and click Predict.
+      </div>
+
+      <div id="result-content" hidden>
+        <div class="result-summary">
+          <div>
+            <span id="result-kicker" class="result-kicker">Prediction</span>
+            <h3 id="result-label"></h3>
+          </div>
+          <div id="result-icon" class="result-icon" aria-hidden="true"></div>
+        </div>
+
+        <div class="score-block">
+          <div class="score-row">
+            <span>BBB permeability score</span>
+            <strong id="probability"></strong>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="probability-bar" class="progress-bar"></div>
+          </div>
+          <p>Model confidence: <span id="confidence"></span></p>
+        </div>
+
+        <div class="molecule-card">
+          <img id="structure-image" alt="Two-dimensional molecular structure">
+          <dl class="identity-list">
+            <div>
+              <dt>Molecular formula</dt>
+              <dd id="molecular-formula"></dd>
+            </div>
+            <div>
+              <dt>Canonical SMILES</dt>
+              <dd id="canonical-smiles"></dd>
+            </div>
+          </dl>
+        </div>
+
+        <h3 class="descriptor-title">Molecular properties</h3>
+        <div id="descriptor-grid" class="descriptor-grid"></div>
+      </div>
+    </section>
+
+    <footer>
+      <p>For educational and research use only. Experimental validation is required.</p>
+      <a href="/docs">API documentation</a>
+    </footer>
+  </main>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
