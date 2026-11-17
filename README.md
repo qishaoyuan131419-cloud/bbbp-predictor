@@ -7,7 +7,7 @@ The result includes the predicted class, BBB permeability score, confidence, mol
 ## Run locally
 
 ```bash
-git clone https://github.com/Shaoyuan04/bbbp-predictor.git
+git clone https://github.com/qishaoyuan131419-cloud/bbbp-predictor.git
 cd bbbp-predictor
 python -m venv .venv
 ```
